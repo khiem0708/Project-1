@@ -1,0 +1,80 @@
+#define BLYNK_TEMPLATE_ID "TMPL6yV917LqZ"
+#define BLYNK_TEMPLATE_NAME "Project 1"
+
+#define BLYNK_FIRMWARE_VERSION        "0.1.0"
+#define BLYNK_PRINT Serial
+#define APP_DEBUG
+#define USE_NODE_MCU_BOARD
+#include "BlynkEdgent.h"
+
+#include "DHTesp.h"
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+DHTesp dht;
+unsigned long timeShowOled=millis();
+float temperature, humidity;
+BlynkTimer timer;
+WidgetLED LEDCONNECT (V0);
+#define   NHIETDO     V1
+#define   DOAM        V2
+char auth[] = "_RcL4Q53bX2MEro7eWJj87d2o5Clur0L";   // Thay "Your_Blynk_Auth_Token" bằng mã Auth của bạn được gửi qua email khi tạo dự án Blynk.
+char ssid[] = "Xiaomi12T";               // Thay "Your_SSID" bằng tên WiFi của bạn.
+char pass[] = "88888888";           // Thay "Your_Password" bằng mật khẩu WiFi của bạn.
+void setup()
+{
+  Serial.begin(115200);
+  delay(100);
+  BlynkEdgent.begin();
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  delay(2000); // Pause for 2 seconds
+  dht.setup(16, DHTesp::DHT11);
+  timer.setInterval(1000L,updateBlynk);
+}
+
+void loop() {
+  BlynkEdgent.run();
+  timer.run();
+  if(millis()-timeShowOled>dht.getMinimumSamplingPeriod()){
+    float t = dht.getTemperature();
+    float h = dht.getHumidity();
+    if(dht.getStatusString()=="OK"){
+      temperature=t;
+      humidity=h;
+      showOled(temperature, humidity);
+    }
+    timeShowOled=millis();
+  }
+}
+void updateBlynk(){
+  if(LEDCONNECT.getValue())LEDCONNECT.off();
+  else LEDCONNECT.on();
+  Blynk.virtualWrite(NHIETDO,temperature);
+  Blynk.virtualWrite(DOAM,humidity);
+}
+void showOled(float t, float h){
+  display.clearDisplay();
+  display.setTextSize(2);                     // Normal 1:2 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);                     // Start at top-left corner
+  display.print("T: ");
+  display.print(t,1);
+  display.print((char)247);
+  display.println("C");
+  display.print("H: ");
+  display.print(h,0);
+  display.println("%");
+  display.display();
+}
+
